@@ -7,6 +7,7 @@ Set of tools to handle Map type in Golang.
 
 #### note:
 -  Examine the function definition, and if your map type differs from the [interface{}]interface{}, convert it first.
+
 ```go
 // convert to type [interface{}]interface{}
 map1 := map[string]int{"a": 1, "b": 2}
@@ -18,20 +19,15 @@ for key, value := range map1 {
 }
 ```
 
-| Summary of methods
-| ------ |
-| PrettyPrintMap |
-| ContainsKey | 
-| MapType | 
-| Clone | 
-| ConcatMaps | 
-| IsTheSameMap | 
-| GetValueFromMap | 
-| ConvertMapToJSON | 
-| ConvertJSONToMap | 
-| IsMapEmpty | 
-| SortMapByKeys | 
-| SortMapByCustomKey |
+| Summary of methods |  |
+| ------------- | ------------- |
+| PrettyPrintMap |  ConcatMaps | 
+| ContainsKey  | IsTheSameMap | 
+| MapType | GetValueFromMap | 
+| Clone | CloneAsync |
+| ConvertMapToJSON |ConvertJSONToMap | 
+| IsMapEmpty | SortMapByKeys | 
+| SortMapByCustomKey | IterateMap |
 
 ### Usage examples
 
@@ -86,6 +82,42 @@ p2.Name = "Jane"
 
 fmt.Println(p1) // {John 30}
 fmt.Println(p2) // {Jane 30}
+```
+
+#### CloneAsync
+The Clone function is an asynchronous deep copy function that creates a new copy of an input value by recursively copying all its child values asynchronously, using goroutines and the sync.WaitGroup type. It can handle input values of type map, slice, and struct, and returns the input value for any other type.
+
+```go
+import (
+    "fmt"
+    "reflect"
+    "sync"
+)
+
+type User struct {
+    ID   int
+    Name string
+}
+
+func main() {
+    data := map[interface{}]interface{}{
+        "users": []interface{}{
+            User{ID: 1, Name: "Alice"},
+            User{ID: 2, Name: "Bob"},
+        },
+        "settings": map[interface{}]interface{}{
+            "color": "blue",
+            "theme": "light",
+        },
+    }
+
+    copy := CloneAsync(data).(map[interface{}]interface{})
+
+    fmt.Printf("Original: %v\n", data)
+    fmt.Printf("Copy: %v\n", copy)
+    fmt.Println("Are original and copy equal? ", reflect.DeepEqual(data, copy))
+}
+
 ```
 
 #### ConcatMaps
@@ -218,4 +250,19 @@ sortedKeys := sortMapByCustomKey(myMap, keyExtractor)
 fmt.Println(sortedKeys) // prints ["four", "one", "three", "two"]
 ```
 
+#### IterateMap
+This function takes a map as an argument and returns a channel that allows the caller to iterate over the map by receiving pairs of key and value from the channel.
+```go
+m := map[interface{}]interface{}{
+  "a": 1,
+  "b": 2,
+  "c": 3,
+  4:   "four",
+}
 
+for pair := range IterateMap(m) {
+  key := pair[0]
+  value := pair[1]
+  fmt.Println("Key:", key, "Value:", value)
+}
+```

@@ -390,3 +390,49 @@ func TestPrettyPrintMap(t *testing.T) {
 		t.Errorf("Expected prettyPrintMap to output '%s', got '%s'", expectedOutput, buf.String())
 	}
 }
+
+func TestIterateMap(t *testing.T) {
+	m := map[interface{}]interface{}{
+		"a": 1,
+		2:   "b",
+	}
+
+	expected := [][2]interface{}{
+		{"a", 1},
+		{2, "b"},
+	}
+
+	i := 0
+	for pair := range IterateMap(m) {
+		if pair != expected[i] {
+			t.Errorf("Expected %v, got %v", expected[i], pair)
+		}
+		i++
+	}
+}
+
+func TestCloneAsync(t *testing.T) {
+	type User struct {
+		ID   int
+		Name string
+	}
+	// Create a sample data structure to clone
+	data := map[interface{}]interface{}{
+		"users": []interface{}{
+			User{ID: 1, Name: "Alice"},
+			User{ID: 2, Name: "Bob"},
+		},
+		"settings": map[interface{}]interface{}{
+			"color": "blue",
+			"theme": "light",
+		},
+	}
+
+	// Clone the data structure asynchronously
+	copy := CloneAsync(data).(map[interface{}]interface{})
+
+	// Check that the original and copy are equal
+	if !reflect.DeepEqual(data, copy) {
+		t.Errorf("Expected copy to be equal to original, but got %v", copy)
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 )
 
 func MapType(input map[interface{}]interface{}) (keyType, valueType string) {
@@ -211,4 +212,77 @@ func PrettyPrintMap(m map[interface{}]interface{}) {
 	for k, v := range m {
 		fmt.Printf("%v: %v\n", k, v)
 	}
+}
+
+func IterateMap(m map[interface{}]interface{}) <-chan [2]interface{} {
+	ch := make(chan [2]interface{})
+	go func() {
+		for k, v := range m {
+			ch <- [2]interface{}{k, v}
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+func CloneAsync(o interface{}) interface{} {
+	if o == nil {
+		return nil
+	}
+
+	var wg sync.WaitGroup
+	var result interface{}
+
+	switch reflect.TypeOf(o).Kind() {
+	case reflect.Map:
+		result = deepCopyMapAsync(o.(map[interface{}]interface{}), &wg)
+	case reflect.Slice:
+		result = deepCopySliceAsync(o.([]interface{}), &wg)
+	case reflect.Struct:
+		result = deepCopyStructAsync(o, &wg)
+	default:
+		return o
+	}
+
+	wg.Wait()
+	return result
+}
+
+func deepCopyMapAsync(m map[interface{}]interface{}, wg *sync.WaitGroup) map[interface{}]interface{} {
+	copy := make(map[interface{}]interface{})
+	for k, v := range m {
+		wg.Add(1)
+		go func(k, v interface{}) {
+			copy[k] = Clone(v)
+			wg.Done()
+		}(k, v)
+	}
+	return copy
+}
+
+func deepCopySliceAsync(s []interface{}, wg *sync.WaitGroup) []interface{} {
+	copy := make([]interface{}, len(s))
+	for i, v := range s {
+		wg.Add(1)
+		go func(i int, v interface{}) {
+			copy[i] = Clone(v)
+			wg.Done()
+		}(i, v)
+	}
+	return copy
+}
+
+func deepCopyStructAsync(o interface{}, wg *sync.WaitGroup) interface{} {
+	t := reflect.TypeOf(o)
+	v := reflect.ValueOf(o)
+
+	copy := reflect.New(t).Elem()
+	for i := 0; i < t.NumField(); i++ {
+		wg.Add(1)
+		go func(i int) {
+			copy.Field(i).Set(deepCopyValue(v.Field(i)))
+			wg.Done()
+		}(i)
+	}
+	return copy.Interface()
 }
